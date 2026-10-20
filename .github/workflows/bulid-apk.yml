@@ -29,18 +29,14 @@ jobs:
 
       - name: Build Android APK
         run: |
-          mkdir -p unzipped_game
-          for z in *.zip */*.zip; do
-            if [ -f "$z" ]; then unzip -o -q "$z" -d unzipped_game || true; fi
-          done
           mkdir -p android_project/app/src/main/assets
           mkdir -p android_project/app/src/main/java/com/pawarjigaming/shadowvale
-          GAME_HTML=$(find . -type f -name "*.html" ! -path "./android_project/*" | head -n 1)
-          if [ -z "$GAME_HTML" ]; then
-            GAME_HTML=$(grep -ril "<!DOCTYPE html" . --exclude-dir=android_project --exclude-dir=.git | head -n 1)
+          if [ -f "ShadowVale-EmberQuest-Android-APK.zip" ]; then
+            cp "ShadowVale-EmberQuest-Android-APK.zip" android_project/app/src/main/assets/index.html
+          else
+            GAME_FILE=$(find . -maxdepth 2 -type f \( -name "*.html" -o -name "ShadowVale*" \) ! -path "./android_project/*" | head -n 1)
+            cp "$GAME_FILE" android_project/app/src/main/assets/index.html
           fi
-          echo "Found Game HTML -> $GAME_HTML"
-          cp "$GAME_HTML" android_project/app/src/main/assets/index.html
           echo 'pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }' > android_project/settings.gradle
           echo 'dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }' >> android_project/settings.gradle
           echo 'rootProject.name = "ShadowVale"' >> android_project/settings.gradle
@@ -57,7 +53,6 @@ jobs:
           echo '  defaultConfig {' >> "$APP_GRADLE"
           echo '    applicationId "com.pawarjigaming.shadowvale"' >> "$APP_GRADLE"
           echo '    minSdk 24' >> "$APP_GRADLE"
-          echo '    minSdkVersion 24' >> "$APP_GRADLE"
           echo '    targetSdk 34' >> "$APP_GRADLE"
           echo '    versionCode 1' >> "$APP_GRADLE"
           echo '    versionName "1.0"' >> "$APP_GRADLE"
