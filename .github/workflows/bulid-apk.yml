@@ -8,46 +8,35 @@ jobs:
       - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Auto-Unzip Package & Verify Android Project
-        run: |
-          for z in *.zip; do
-            if [ -f "$z" ]; then
-              unzip -o "$z"
-            fi
-          done
-          mkdir -p app/src/main/assets app/src/main/java/com/pawarjigaming/shadowvale
-          if [ -f index.html ] && [ ! -f app/src/main/assets/index.html ]; then
-            cp index.html app/src/main/assets/index.html
-          fi
-          if [ ! -f settings.gradle ]; then
-            printf 'pluginManagement {\n  repositories {\n    google()\n    mavenCentral()\n    gradlePluginPortal()\n  }\n}\ndependencyResolutionManagement {\n  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n  repositories {\n    google()\n    mavenCentral()\n  }\n}\nrootProject.name = "ShadowValeEmberQuest"\ninclude ":app"\n' > settings.gradle
-          fi
-          if [ ! -f gradle.properties ]; then
-            printf 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\nandroid.useAndroidX=true\n' > gradle.properties
-          fi
-          if [ ! -f build.gradle ]; then
-            printf 'plugins {\n  id "com.android.application" version "8.1.4" apply false\n}\n' > build.gradle
-          fi
-          if [ ! -f app/build.gradle ]; then
-            printf 'plugins {\n  id "com.android.application"\n}\nandroid {\n  namespace "com.pawarjigaming.shadowvale"\n  compileSdk 34\n  defaultConfig {\n    applicationId "com.pawarjigaming.shadowvale"\n    minSdk 24\n    targetSdk 34\n    versionCode 1\n    versionName "1.0"\n  }\n  compileOptions {\n    sourceCompatibility JavaVersion.VERSION_17\n    targetCompatibility JavaVersion.VERSION_17\n  }\n}\ndependencies {\n  implementation "androidx.appcompat:appcompat:1.6.1"\n  implementation "com.google.android.gms:play-services-ads:23.0.0"\n}\n' > app/build.gradle
-          fi
-
       - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Setup Gradle 8.4
-        uses: gradle/actions/setup-gradle@v3
-        with:
-          gradle-version: '8.4'
-
-      - name: Build Debug APK
-        run: gradle assembleDebug --no-daemon --stacktrace
+      - name: Auto-Generate Complete Android Project & Build APK
+        run: |
+          for z in *.zip; do
+            if [ -f "$z" ]; then unzip -o "$z"; fi
+          done
+          mkdir -p app/src/main/assets app/src/main/java/com/pawarjigaming/shadowvale
+          if [ -f shadowblade_android_rpg.html ]; then
+            cp shadowblade_android_rpg.html app/src/main/assets/index.html
+          elif [ -f index.html ]; then
+            cp index.html app/src/main/assets/index.html
+          fi
+          if [ ! -f app/src/main/assets/index.html ]; then
+            printf '<!DOCTYPE html><html><body style="background:#05070e;color:#fde047;font-family:sans-serif;text-align:center;padding-top:20%%;"><h1>PAWAR JI GAMING PRESENTS</h1><h2>Shadow Vale: Ember Quest</h2></body></html>' > app/src/main/assets/index.html
+          fi
+          printf 'pluginManagement {\n  repositories {\n    google()\n    mavenCentral()\n    gradlePluginPortal()\n  }\n}\ndependencyResolutionManagement {\n  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n  repositories {\n    google()\n    mavenCentral()\n  }\n}\nrootProject.name = "ShadowValeEmberQuest"\ninclude ":app"\n' > settings.gradle
+          printf 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\nandroid.useAndroidX=true\nandroid.enableJetifier=true\n' > gradle.properties
+          printf 'plugins {\n  id "com.android.application" version "8.1.4" apply false\n}\n' > build.gradle
+          printf 'plugins {\n  id "com.android.application"\n}\nandroid {\n  namespace "com.pawarjigaming.shadowvale"\n  compileSdk 34\n  defaultConfig {\n    applicationId "com.pawarjigaming.shadowvale"\n    minSdk 24\n    targetSdk 34\n    versionCode 1\n    versionName "1.0"\n  }\n  compileOptions {\n    sourceCompatibility JavaVersion.VERSION_17\n    targetCompatibility JavaVersion.VERSION_17\n  }\n}\ndependencies {\n  implementation "androidx.appcompat:appcompat:1.6.1"\n  implementation "com.google.android.gms:play-services-ads:22.6.0"\n}\n' > app/build.gradle
+          printf '<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n  <uses-permission android:name="android.permission.INTERNET" />\n  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n  <uses-permission android:name="com.google.android.gms.permission.AD_ID" />\n  <application\n    android:label="Shadow Vale: Ember Quest"\n    android:icon="@android:drawable/sym_def_app_icon"\n    android:theme="@android:style/Theme.NoTitleBar.Fullscreen"\n    android:hardwareAccelerated="true"\n    android:usesCleartextTraffic="true">\n    <meta-data\n      android:name="com.google.android.gms.ads.APPLICATION_ID"\n      android:value="ca-app-pub-8251220250880290~5084634199" />\n    <activity\n      android:name=".MainActivity"\n      android:exported="true"\n      android:screenOrientation="sensorLandscape"\n      android:configChanges="orientation|screenSize|keyboardHidden">\n      <intent-filter>\n        <action android:name="android.intent.action.MAIN" />\n        <category android:name="android.intent.category.LAUNCHER" />\n      </intent-filter>\n    </activity>\n  </application>\n</manifest>\n' > app/src/main/AndroidManifest.xml
+          printf 'package com.pawarjigaming.shadowvale;\nimport android.app.Activity;\nimport android.os.Bundle;\nimport android.view.Gravity;\nimport android.view.View;\nimport android.view.WindowManager;\nimport android.webkit.JavascriptInterface;\nimport android.webkit.WebChromeClient;\nimport android.webkit.WebSettings;\nimport android.webkit.WebView;\nimport android.webkit.WebViewClient;\nimport android.widget.FrameLayout;\nimport androidx.annotation.NonNull;\nimport com.google.android.gms.ads.AdRequest;\nimport com.google.android.gms.ads.AdSize;\nimport com.google.android.gms.ads.AdView;\nimport com.google.android.gms.ads.LoadAdError;\nimport com.google.android.gms.ads.MobileAds;\nimport com.google.android.gms.ads.interstitial.InterstitialAd;\nimport com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;\nimport com.google.android.gms.ads.rewarded.RewardedAd;\nimport com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;\npublic class MainActivity extends Activity {\n  private WebView webView;\n  private AdView bannerAdView;\n  private InterstitialAd mInterstitialAd;\n  private RewardedAd mRewardedAd;\n  private static final String BANNER_ID = "ca-app-pub-8251220250880290/8023542749";\n  private static final String INTERSTITIAL_ID = "ca-app-pub-8251220250880290/9714319357";\n  private static final String REWARDED_ID = "ca-app-pub-8251220250880290/8215114432";\n  @Override\n  protected void onCreate(Bundle savedInstanceState) {\n    super.onCreate(savedInstanceState);\n    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\n    FrameLayout root = new FrameLayout(this);\n    webView = new WebView(this);\n    WebSettings ws = webView.getSettings();\n    ws.setJavaScriptEnabled(true);\n    ws.setDomStorageEnabled(true);\n    ws.setAllowFileAccess(true);\n    ws.setMediaPlaybackRequiresUserGesture(false);\n    webView.setWebChromeClient(new WebChromeClient());\n    webView.setWebViewClient(new WebViewClient());\n    webView.addJavascriptInterface(new AdMobBridge(), "AndroidAdMob");\n    root.addView(webView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));\n    MobileAds.initialize(this, s -> {});\n    bannerAdView = new AdView(this);\n    bannerAdView.setAdUnitId(BANNER_ID);\n    bannerAdView.setAdSize(AdSize.BANNER);\n    FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);\n    root.addView(bannerAdView, bp);\n    bannerAdView.loadAd(new AdRequest.Builder().build());\n    loadInterstitial();\n    loadRewarded();\n    setContentView(root);\n    webView.loadUrl("file:///android_asset/index.html");\n  }\n  private void loadInterstitial() {\n    InterstitialAd.load(this, INTERSTITIAL_ID, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {\n      @Override public void onAdLoaded(@NonNull InterstitialAd ad) { mInterstitialAd = ad; }\n      @Override public void onAdFailedToLoad(@NonNull LoadAdError e) { mInterstitialAd = null; }\n    });\n  }\n  private void loadRewarded() {\n    RewardedAd.load(this, REWARDED_ID, new AdRequest.Builder().build(), new RewardedAdLoadCallback() {\n      @Override public void onAdLoaded(@NonNull RewardedAd ad) { mRewardedAd = ad; }\n      @Override public void onAdFailedToLoad(@NonNull LoadAdError e) { mRewardedAd = null; }\n    });\n  }\n  public class AdMobBridge {\n    @JavascriptInterface public void initialize(String b, String i, String r) {}\n    @JavascriptInterface public void setBannerVisible(final boolean v, String u) { runOnUiThread(() -> { if (bannerAdView != null) bannerAdView.setVisibility(v ? View.VISIBLE : View.GONE); }); }\n    @JavascriptInterface public void showInterstitial(String u) { runOnUiThread(() -> { if (mInterstitialAd != null) { mInterstitialAd.show(MainActivity.this); loadInterstitial(); } webView.evaluateJavascript("if(window.onAdMobInterstitialClosed)window.onAdMobInterstitialClosed();", null); }); }\n    @JavascriptInterface public void showRewarded(String u) { runOnUiThread(() -> { if (mRewardedAd != null) { mRewardedAd.show(MainActivity.this, item -> webView.evaluateJavascript("if(window.onAdMobRewardGranted)window.onAdMobRewardGranted();", null)); loadRewarded(); } else { webView.evaluateJavascript("if(window.onAdMobRewardGranted)window.onAdMobRewardGranted();", null); } }); }\n  }\n}\n' > app/src/main/java/com/pawarjigaming/shadowvale/MainActivity.java
+          curl -sL https://services.gradle.org/distributions/gradle-8.4-bin.zip -o gradle-bin.zip
+          unzip -q gradle-bin.zip
+          ./gradle-8.4/bin/gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload Ready Android APK
         uses: actions/upload-artifact@v4
