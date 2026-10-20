@@ -1,45 +1,394 @@
 name: Build Shadow Vale Android APK
-on: [push, workflow_dispatch]
+
+on:
+  push:
+    branches: [ "main", "master" ]
+  workflow_dispatch:
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout Repository
+      - name: 1. Checkout Repository
         uses: actions/checkout@v4
 
-      - name: Set up JDK 17
+      - name: 2. Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          distribution: 'temurin'
           java-version: '17'
+          distribution: 'temurin'
 
-      - name: Auto-Generate Complete Android Project & Build APK
+      - name: 3. Set up Android SDK & Gradle
+        uses: android-actions/setup-android@v3
+
+      - name: 4. Generate Android Project & Auto-Fit Mobile Display
         run: |
-          for z in *.zip; do
-            if [ -f "$z" ]; then unzip -o "$z"; fi
-          done
-          mkdir -p app/src/main/assets app/src/main/java/com/pawarjigaming/shadowvale
-          if [ -f shadowblade_android_rpg.html ]; then
-            cp shadowblade_android_rpg.html app/src/main/assets/index.html
-          elif [ -f index.html ]; then
-            cp index.html app/src/main/assets/index.html
-          fi
-          if [ ! -f app/src/main/assets/index.html ]; then
-            printf '<!DOCTYPE html><html><body style="background:#05070e;color:#fde047;font-family:sans-serif;text-align:center;padding-top:20%%;"><h1>PAWAR JI GAMING PRESENTS</h1><h2>Shadow Vale: Ember Quest</h2></body></html>' > app/src/main/assets/index.html
-          fi
-          printf 'pluginManagement {\n  repositories {\n    google()\n    mavenCentral()\n    gradlePluginPortal()\n  }\n}\ndependencyResolutionManagement {\n  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n  repositories {\n    google()\n    mavenCentral()\n  }\n}\nrootProject.name = "ShadowValeEmberQuest"\ninclude ":app"\n' > settings.gradle
-          printf 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\nandroid.useAndroidX=true\nandroid.enableJetifier=true\n' > gradle.properties
-          printf 'plugins {\n  id "com.android.application" version "8.1.4" apply false\n}\n' > build.gradle
-          printf 'plugins {\n  id "com.android.application"\n}\nandroid {\n  namespace "com.pawarjigaming.shadowvale"\n  compileSdk 34\n  defaultConfig {\n    applicationId "com.pawarjigaming.shadowvale"\n    minSdk 24\n    targetSdk 34\n    versionCode 1\n    versionName "1.0"\n  }\n  compileOptions {\n    sourceCompatibility JavaVersion.VERSION_17\n    targetCompatibility JavaVersion.VERSION_17\n  }\n}\ndependencies {\n  implementation "androidx.appcompat:appcompat:1.6.1"\n  implementation "com.google.android.gms:play-services-ads:22.6.0"\n}\n' > app/build.gradle
-          printf '<?xml version="1.0" encoding="utf-8"?>\n<manifest xmlns:android="http://schemas.android.com/apk/res/android">\n  <uses-permission android:name="android.permission.INTERNET" />\n  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />\n  <uses-permission android:name="com.google.android.gms.permission.AD_ID" />\n  <application\n    android:label="Shadow Vale: Ember Quest"\n    android:icon="@android:drawable/sym_def_app_icon"\n    android:theme="@android:style/Theme.NoTitleBar.Fullscreen"\n    android:hardwareAccelerated="true"\n    android:usesCleartextTraffic="true">\n    <meta-data\n      android:name="com.google.android.gms.ads.APPLICATION_ID"\n      android:value="ca-app-pub-8251220250880290~5084634199" />\n    <activity\n      android:name=".MainActivity"\n      android:exported="true"\n      android:screenOrientation="sensorLandscape"\n      android:configChanges="orientation|screenSize|keyboardHidden">\n      <intent-filter>\n        <action android:name="android.intent.action.MAIN" />\n        <category android:name="android.intent.category.LAUNCHER" />\n      </intent-filter>\n    </activity>\n  </application>\n</manifest>\n' > app/src/main/AndroidManifest.xml
-          printf 'package com.pawarjigaming.shadowvale;\nimport android.app.Activity;\nimport android.os.Bundle;\nimport android.view.Gravity;\nimport android.view.View;\nimport android.view.WindowManager;\nimport android.webkit.JavascriptInterface;\nimport android.webkit.WebChromeClient;\nimport android.webkit.WebSettings;\nimport android.webkit.WebView;\nimport android.webkit.WebViewClient;\nimport android.widget.FrameLayout;\nimport androidx.annotation.NonNull;\nimport com.google.android.gms.ads.AdRequest;\nimport com.google.android.gms.ads.AdSize;\nimport com.google.android.gms.ads.AdView;\nimport com.google.android.gms.ads.LoadAdError;\nimport com.google.android.gms.ads.MobileAds;\nimport com.google.android.gms.ads.interstitial.InterstitialAd;\nimport com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;\nimport com.google.android.gms.ads.rewarded.RewardedAd;\nimport com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;\npublic class MainActivity extends Activity {\n  private WebView webView;\n  private AdView bannerAdView;\n  private InterstitialAd mInterstitialAd;\n  private RewardedAd mRewardedAd;\n  private static final String BANNER_ID = "ca-app-pub-8251220250880290/8023542749";\n  private static final String INTERSTITIAL_ID = "ca-app-pub-8251220250880290/9714319357";\n  private static final String REWARDED_ID = "ca-app-pub-8251220250880290/8215114432";\n  @Override\n  protected void onCreate(Bundle savedInstanceState) {\n    super.onCreate(savedInstanceState);\n    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);\n    FrameLayout root = new FrameLayout(this);\n    webView = new WebView(this);\n    WebSettings ws = webView.getSettings();\n    ws.setJavaScriptEnabled(true);\n    ws.setDomStorageEnabled(true);\n    ws.setAllowFileAccess(true);\n    ws.setMediaPlaybackRequiresUserGesture(false);\n    webView.setWebChromeClient(new WebChromeClient());\n    webView.setWebViewClient(new WebViewClient());\n    webView.addJavascriptInterface(new AdMobBridge(), "AndroidAdMob");\n    root.addView(webView, new FrameLayout.LayoutParams(FrameLayout.LayoutParams.MATCH_PARENT, FrameLayout.LayoutParams.MATCH_PARENT));\n    MobileAds.initialize(this, s -> {});\n    bannerAdView = new AdView(this);\n    bannerAdView.setAdUnitId(BANNER_ID);\n    bannerAdView.setAdSize(AdSize.BANNER);\n    FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(FrameLayout.LayoutParams.WRAP_CONTENT, FrameLayout.LayoutParams.WRAP_CONTENT, Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL);\n    root.addView(bannerAdView, bp);\n    bannerAdView.loadAd(new AdRequest.Builder().build());\n    loadInterstitial();\n    loadRewarded();\n    setContentView(root);\n    webView.loadUrl("file:///android_asset/index.html");\n  }\n  private void loadInterstitial() {\n    InterstitialAd.load(this, INTERSTITIAL_ID, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {\n      @Override public void onAdLoaded(@NonNull InterstitialAd ad) { mInterstitialAd = ad; }\n      @Override public void onAdFailedToLoad(@NonNull LoadAdError e) { mInterstitialAd = null; }\n    });\n  }\n  private void loadRewarded() {\n    RewardedAd.load(this, REWARDED_ID, new AdRequest.Builder().build(), new RewardedAdLoadCallback() {\n      @Override public void onAdLoaded(@NonNull RewardedAd ad) { mRewardedAd = ad; }\n      @Override public void onAdFailedToLoad(@NonNull LoadAdError e) { mRewardedAd = null; }\n    });\n  }\n  public class AdMobBridge {\n    @JavascriptInterface public void initialize(String b, String i, String r) {}\n    @JavascriptInterface public void setBannerVisible(final boolean v, String u) { runOnUiThread(() -> { if (bannerAdView != null) bannerAdView.setVisibility(v ? View.VISIBLE : View.GONE); }); }\n    @JavascriptInterface public void showInterstitial(String u) { runOnUiThread(() -> { if (mInterstitialAd != null) { mInterstitialAd.show(MainActivity.this); loadInterstitial(); } webView.evaluateJavascript("if(window.onAdMobInterstitialClosed)window.onAdMobInterstitialClosed();", null); }); }\n    @JavascriptInterface public void showRewarded(String u) { runOnUiThread(() -> { if (mRewardedAd != null) { mRewardedAd.show(MainActivity.this, item -> webView.evaluateJavascript("if(window.onAdMobRewardGranted)window.onAdMobRewardGranted();", null)); loadRewarded(); } else { webView.evaluateJavascript("if(window.onAdMobRewardGranted)window.onAdMobRewardGranted();", null); } }); }\n  }\n}\n' > app/src/main/java/com/pawarjigaming/shadowvale/MainActivity.java
-          curl -sL https://services.gradle.org/distributions/gradle-8.4-bin.zip -o gradle-bin.zip
-          unzip -q gradle-bin.zip
-          ./gradle-8.4/bin/gradle assembleDebug --no-daemon --stacktrace
+          mkdir -p android_build/app/src/main/assets
+          mkdir -p android_build/app/src/main/java/com/pawarjigaming/shadowvale
+          mkdir -p android_build/app/src/main/res/layout
+          mkdir -p android_build/app/src/main/res/values
 
-      - name: Upload Ready Android APK
+          if [ -f "index.html" ]; then
+            cp index.html android_build/app/src/main/assets/index.html
+          elif [ -f "shadowblade_android_rpg.html" ]; then
+            cp shadowblade_android_rpg.html android_build/app/src/main/assets/index.html
+          elif [ -f "app/src/main/assets/index.html" ]; then
+            cp app/src/main/assets/index.html android_build/app/src/main/assets/index.html
+          else
+            FIRST_HTML=$(find . -maxdepth 2 -name "*.html" | head -n 1)
+            if [ -n "$FIRST_HTML" ]; then
+              cp "$FIRST_HTML" android_build/app/src/main/assets/index.html
+            else
+              echo "ERROR: Repo mein index.html upload karein!"
+              exit 1
+            fi
+          fi
+
+          # Inject Mobile Display Auto-Fit CSS & JS into index.html
+          cat << 'EOF' >> android_build/app/src/main/assets/index.html
+          <style>
+            html, body { width: 100dvw !important; height: 100dvh !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; }
+            .screen-layer { width: 100dvw !important; height: 100dvh !important; padding: 6px 10px !important; }
+            @media (max-height: 500px) {
+              #pawarSplashCenterCard { padding: 8px 14px !important; max-height: 78dvh !important; transform: scale(0.82) !important; }
+              #pawarSplashCenterCard .w-24 { width: 44px !important; height: 44px !important; margin-bottom: 4px !important; }
+              #pawarSplashCenterCard h1 { font-size: 1.45rem !important; }
+              #btnTapToOpenGame { padding: 7px 16px !important; font-size: 0.78rem !important; }
+              #screen-main-menu h1 { font-size: 1.65rem !important; }
+              #screen-main-menu h2 { font-size: 0.85rem !important; margin-bottom: 4px !important; }
+              #screen-main-menu .menu-btn, #screen-main-menu .crimson-btn { padding: 6px 12px !important; font-size: 0.74rem !important; }
+              #popup-level-complete > div, #popup-pause > div, #popup-gameover > div, #popup-confirm > div { max-height: 92dvh !important; overflow-y: auto !important; padding: 10px 14px !important; }
+              :root { --hud-scale: 0.75 !important; --btn-scale: 0.80 !important; --joy-scale: 0.80 !important; }
+            }
+            @media (max-width: 600px) {
+              :root { --hud-scale: 0.68 !important; --btn-scale: 0.76 !important; --joy-scale: 0.76 !important; }
+              #screen-gameplay > div.origin-top { top: 52px !important; }
+            }
+          </style>
+          <script>
+            (function() {
+              function fitMobileScreen() {
+                var vw = window.innerWidth, vh = window.innerHeight, isPortrait = vh > vw;
+                var joyWrap = document.getElementById('touchJoystickWrapper');
+                if (joyWrap) { joyWrap.style.left = '14px'; joyWrap.style.bottom = isPortrait ? '22px' : '12px'; }
+                var layout = {
+                  btnAttack:  { right: '14px', bottom: '14px' },
+                  btnJump:    { right: '96px', bottom: '14px' },
+                  btnDash:    { right: '164px', bottom: '16px' },
+                  btnThrow:   { right: '16px', bottom: '92px' },
+                  btnSpecial: { right: '86px', bottom: '82px' },
+                  btnPotion:  { right: '154px', bottom: '82px' }
+                };
+                Object.keys(layout).forEach(function(id) {
+                  var el = document.getElementById(id);
+                  if (el) { el.style.left = 'auto'; el.style.right = layout[id].right; el.style.bottom = layout[id].bottom; }
+                });
+                if (typeof canvas !== 'undefined' && canvas) {
+                  var targetW = isPortrait ? 680 : 860;
+                  if (vw < targetW) {
+                    var ratio = targetW / vw;
+                    cw = Math.round(vw * ratio);
+                    ch = Math.round(vh * ratio);
+                    canvas.width = cw;
+                    canvas.height = ch;
+                    groundY = Math.floor(ch * (isPortrait ? 0.72 : 0.79));
+                    if (typeof rebuildPlatforms === 'function') rebuildPlatforms();
+                    if (typeof player !== 'undefined' && player.onGround) player.y = groundY;
+                  }
+                }
+              }
+              window.addEventListener('resize', fitMobileScreen);
+              window.addEventListener('load', function() {
+                setTimeout(fitMobileScreen, 60);
+                var origResize = window.resizeCanvas;
+                if (typeof origResize === 'function') {
+                  window.resizeCanvas = function() { origResize(); fitMobileScreen(); };
+                }
+                fitMobileScreen();
+              });
+            })();
+          </script>
+          EOF
+
+          cat << 'EOF' > android_build/settings.gradle
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "ShadowValeEmberQuest"
+          include ':app'
+          EOF
+
+          cat << 'EOF' > android_build/build.gradle
+          plugins {
+              id 'com.android.application' version '8.2.2' apply false
+          }
+          EOF
+
+          cat << 'EOF' > android_build/gradle.properties
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=true
+          EOF
+
+          cat << 'EOF' > android_build/app/build.gradle
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.pawarjigaming.shadowvale'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.pawarjigaming.shadowvale"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0.0"
+              }
+              buildTypes {
+                  debug {
+                      minifyEnabled false
+                  }
+              }
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.gms:play-services-ads:23.0.0'
+          }
+          EOF
+
+          cat << 'EOF' > android_build/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android"
+              package="com.pawarjigaming.shadowvale">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <application
+                  android:allowBackup="true"
+                  android:label="Shadow Vale: Ember Quest"
+                  android:hardwareAccelerated="true"
+                  android:theme="@style/Theme.AppCompat.NoActionBar">
+                  <meta-data
+                      android:name="com.google.android.gms.ads.APPLICATION_ID"
+                      android:value="ca-app-pub-8251220250880290~5084634199"/>
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:screenOrientation="sensorLandscape"
+                      android:configChanges="orientation|screenSize|keyboardHidden">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat << 'EOF' > android_build/app/src/main/res/layout/activity_main.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+              xmlns:ads="http://schemas.android.com/apk/res-auto"
+              android:layout_width="match_parent"
+              android:layout_height="match_parent"
+              android:background="#05070e">
+              <WebView
+                  android:id="@+id/gameWebView"
+                  android:layout_width="match_parent"
+                  android:layout_height="match_parent" />
+              <com.google.android.gms.ads.AdView
+                  android:id="@+id/adViewBanner"
+                  android:layout_width="wrap_content"
+                  android:layout_height="wrap_content"
+                  android:layout_alignParentBottom="true"
+                  android:layout_centerHorizontal="true"
+                  ads:adSize="BANNER"
+                  ads:adUnitId="ca-app-pub-8251220250880290/8023542749" />
+          </RelativeLayout>
+          EOF
+
+          cat << 'EOF' > android_build/app/src/main/java/com/pawarjigaming/shadowvale/MainActivity.java
+          package com.pawarjigaming.shadowvale;
+
+          import android.annotation.SuppressLint;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.view.WindowManager;
+          import android.webkit.JavascriptInterface;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import androidx.annotation.NonNull;
+          import androidx.appcompat.app.AppCompatActivity;
+
+          import com.google.android.gms.ads.AdError;
+          import com.google.android.gms.ads.AdRequest;
+          import com.google.android.gms.ads.AdView;
+          import com.google.android.gms.ads.FullScreenContentCallback;
+          import com.google.android.gms.ads.LoadAdError;
+          import com.google.android.gms.ads.MobileAds;
+          import com.google.android.gms.ads.interstitial.InterstitialAd;
+          import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;
+          import com.google.android.gms.ads.rewarded.RewardedAd;
+          import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;
+
+          public class MainActivity extends AppCompatActivity {
+              private WebView webView;
+              private AdView bannerAdView;
+              private InterstitialAd mInterstitialAd;
+              private RewardedAd mRewardedAd;
+
+              private static final String INTERSTITIAL_UNIT_ID = "ca-app-pub-8251220250880290/9714319357";
+              private static final String REWARDED_UNIT_ID = "ca-app-pub-8251220250880290/8215114432";
+
+              @SuppressLint("SetJavaScriptEnabled")
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().setFlags(
+                      WindowManager.LayoutParams.FLAG_FULLSCREEN,
+                      WindowManager.LayoutParams.FLAG_FULLSCREEN
+                  );
+                  hideSystemUI();
+                  setContentView(R.layout.activity_main);
+
+                  MobileAds.initialize(this, initializationStatus -> {});
+
+                  bannerAdView = findViewById(R.id.adViewBanner);
+                  bannerAdView.loadAd(new AdRequest.Builder().build());
+
+                  loadInterstitial();
+                  loadRewarded();
+
+                  webView = findViewById(R.id.gameWebView);
+                  WebSettings ws = webView.getSettings();
+                  ws.setJavaScriptEnabled(true);
+                  ws.setDomStorageEnabled(true);
+                  ws.setMediaPlaybackRequiresUserGesture(false);
+                  ws.setAllowFileAccess(true);
+                  ws.setUseWideViewPort(true);
+                  ws.setLoadWithOverviewMode(true);
+                  ws.setTextZoom(100);
+
+                  webView.setWebChromeClient(new WebChromeClient());
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.addJavascriptInterface(new AdMobBridge(), "AndroidAdMob");
+                  webView.loadUrl("file:///android_asset/index.html");
+              }
+
+              @Override
+              public void onWindowFocusChanged(boolean hasFocus) {
+                  super.onWindowFocusChanged(hasFocus);
+                  if (hasFocus) hideSystemUI();
+              }
+
+              private void hideSystemUI() {
+                  getWindow().getDecorView().setSystemUiVisibility(
+                      View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                      | View.SYSTEM_UI_FLAG_LAYOUT_STABLE
+                      | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION
+                      | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN
+                      | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION
+                      | View.SYSTEM_UI_FLAG_FULLSCREEN
+                  );
+              }
+
+              private void loadInterstitial() {
+                  InterstitialAd.load(this, INTERSTITIAL_UNIT_ID, new AdRequest.Builder().build(),
+                      new InterstitialAdLoadCallback() {
+                          @Override
+                          public void onAdLoaded(@NonNull InterstitialAd ad) { mInterstitialAd = ad; }
+                          @Override
+                          public void onAdFailedToLoad(@NonNull LoadAdError adError) { mInterstitialAd = null; }
+                      });
+              }
+
+              private void loadRewarded() {
+                  RewardedAd.load(this, REWARDED_UNIT_ID, new AdRequest.Builder().build(),
+                      new RewardedAdLoadCallback() {
+                          @Override
+                          public void onAdLoaded(@NonNull RewardedAd ad) { mRewardedAd = ad; }
+                          @Override
+                          public void onAdFailedToLoad(@NonNull LoadAdError adError) { mRewardedAd = null; }
+                      });
+              }
+
+              public class AdMobBridge {
+                  @JavascriptInterface
+                  public void initialize(String bannerId, String interId, String rewardId) {}
+
+                  @JavascriptInterface
+                  public void setBannerVisible(boolean visible, String bannerId) {
+                      runOnUiThread(() -> bannerAdView.setVisibility(visible ? View.VISIBLE : View.GONE));
+                  }
+
+                  @JavascriptInterface
+                  public void showInterstitial(String unitId) {
+                      runOnUiThread(() -> {
+                          if (mInterstitialAd != null) {
+                              mInterstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {
+                                  @Override
+                                  public void onAdDismissedFullScreenContent() {
+                                      mInterstitialAd = null;
+                                      loadInterstitial();
+                                      webView.evaluateJavascript("if(window.onAdMobInterstitialClosed) window.onAdMobInterstitialClosed();", null);
+                                  }
+                                  @Override
+                                  public void onAdFailedToShowFullScreenContent(@NonNull AdError adError) {
+                                      webView.evaluateJavascript("if(window.onAdMobInterstitialClosed) window.onAdMobInterstitialClosed();", null);
+                                  }
+                              });
+                              mInterstitialAd.show(MainActivity.this);
+                          } else {
+                              loadInterstitial();
+                              webView.evaluateJavascript("if(window.onAdMobInterstitialClosed) window.onAdMobInterstitialClosed();", null);
+                          }
+                      });
+                  }
+
+                  @JavascriptInterface
+                  public void showRewarded(String unitId) {
+                      runOnUiThread(() -> {
+                          if (mRewardedAd != null) {
+                              mRewardedAd.show(MainActivity.this, rewardItem -> {
+                                  mRewardedAd = null;
+                                  loadRewarded();
+                                  webView.evaluateJavascript("if(window.onAdMobRewardGranted) window.onAdMobRewardGranted();", null);
+                              });
+                          } else {
+                              loadRewarded();
+                              webView.evaluateJavascript("if(window.onAdMobRewardGranted) window.onAdMobRewardGranted();", null);
+                          }
+                      });
+                  }
+              }
+          }
+          EOF
+
+      - name: 5. Build Debug APK with Gradle
+        working-directory: android_build
+        run: |
+          gradle wrapper --gradle-version 8.4
+          chmod +x gradlew
+          ./gradlew assembleDebug --no-daemon
+
+      - name: 6. Upload Installable APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ShadowVale-EmberQuest-Android-APK
-          path: app/build/outputs/apk/debug/app-debug.apk
+          path: android_build/app/build/outputs/apk/debug/app-debug.apk
