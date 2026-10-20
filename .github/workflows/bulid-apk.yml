@@ -18,121 +18,104 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Setup Android Project
-        run: |
-          mkdir -p android_project/app/src/main/assets
-          mkdir -p android_project/app/src/main/res/values
-          mkdir -p android_project/app/src/main/java/com/pawarjigaming/shadowvale
-          mkdir -p android_project/gradle/wrapper
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
 
-          # Game file copy
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v3
+        with:
+          gradle-version: '8.5'
+
+      - name: Create Native Android Project
+        run: |
+          mkdir -p android_app/app/src/main/assets
+          mkdir -p android_app/app/src/main/res/values
+          mkdir -p android_app/app/src/main/java/com/pawarjigaming/shadowvale
+
+          # Game HTML file copy
           if [ -f "ShadowVale-EmberQuest-Android-APK.zip" ]; then
-            cp "ShadowVale-EmberQuest-Android-APK.zip" android_project/app/src/main/assets/index.html
+            cp "ShadowVale-EmberQuest-Android-APK.zip" android_app/app/src/main/assets/index.html
           elif [ -f "index.html" ]; then
-            cp "index.html" android_project/app/src/main/assets/index.html
+            cp "index.html" android_app/app/src/main/assets/index.html
           fi
 
-          # Gradle Wrapper Setup
-          curl -sLo android_project/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
-          cat << 'EOF' > android_project/gradle/wrapper/gradle-wrapper.properties
-          distributionBase=GRADLE_USER_HOME
-          distributionPath=wrapper/dists
-          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
-          zipStoreBase=GRADLE_USER_HOME
-          zipStorePath=wrapper/dists
-          EOF
+          # Settings Gradle
+          echo 'rootProject.name = "ShadowVale"' > android_app/settings.gradle
+          echo "include ':app'" >> android_app/settings.gradle
 
-          cat << 'EOF' > android_project/gradlew
-          #!/bin/sh
-          DIR=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
-          exec java -jar "$DIR/gradle/wrapper/gradle-wrapper.jar" "$@"
-          EOF
-          chmod +x android_project/gradlew
+          # Root build.gradle
+          echo 'buildscript {' > android_app/build.gradle
+          echo '    repositories {' >> android_app/build.gradle
+          echo '        google()' >> android_app/build.gradle
+          echo '        mavenCentral()' >> android_app/build.gradle
+          echo '    }' >> android_app/build.gradle
+          echo '    dependencies {' >> android_app/build.gradle
+          echo "        classpath 'com.android.tools.build:gradle:8.2.2'" >> android_app/build.gradle
+          echo '    }' >> android_app/build.gradle
+          echo '}' >> android_app/build.gradle
+          echo 'allprojects {' >> android_app/build.gradle
+          echo '    repositories {' >> android_app/build.gradle
+          echo '        google()' >> android_app/build.gradle
+          echo '        mavenCentral()' >> android_app/build.gradle
+          echo '    }' >> android_app/build.gradle
+          echo '}' >> android_app/build.gradle
 
-          # Project Configurations
-          cat << 'EOF' > android_project/settings.gradle
-          rootProject.name = "ShadowVale"
-          include ':app'
-          EOF
+          # App build.gradle
+          echo "plugins { id 'com.android.application' }" > android_app/app/build.gradle
+          echo 'android {' >> android_app/app/build.gradle
+          echo "    namespace 'com.pawarjigaming.shadowvale'" >> android_app/app/build.gradle
+          echo '    compileSdk 34' >> android_app/app/build.gradle
+          echo '    defaultConfig {' >> android_app/app/build.gradle
+          echo "        applicationId 'com.pawarjigaming.shadowvale'" >> android_app/app/build.gradle
+          echo '        minSdk 24' >> android_app/app/build.gradle
+          echo '        targetSdk 34' >> android_app/app/build.gradle
+          echo '        versionCode 1' >> android_app/app/build.gradle
+          echo "        versionName '1.0'" >> android_app/app/build.gradle
+          echo '    }' >> android_app/app/build.gradle
+          echo '    buildTypes {' >> android_app/app/build.gradle
+          echo '        release {' >> android_app/app/build.gradle
+          echo '            minifyEnabled false' >> android_app/app/build.gradle
+          echo '        }' >> android_app/app/build.gradle
+          echo '    }' >> android_app/app/build.gradle
+          echo '}' >> android_app/app/build.gradle
+          echo 'dependencies {' >> android_app/app/build.gradle
+          echo "    implementation 'androidx.appcompat:appcompat:1.6.1'" >> android_app/app/build.gradle
+          echo "    implementation 'com.google.android.gms:play-services-ads:23.0.0'" >> android_app/app/build.gradle
+          echo '}' >> android_app/app/build.gradle
 
-          cat << 'EOF' > android_project/build.gradle
-          buildscript {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-              dependencies {
-                  classpath 'com.android.tools.build:gradle:8.2.2'
-              }
-          }
-          allprojects {
-              repositories {
-                  google()
-                  mavenCentral()
-              }
-          }
-          EOF
+          # App Name Strings
+          echo '<resources>' > android_app/app/src/main/res/values/strings.xml
+          echo '    <string name="app_name">Shadow Vale</string>' >> android_app/app/src/main/res/values/strings.xml
+          echo '</resources>' >> android_app/app/src/main/res/values/strings.xml
 
-          cat << 'EOF' > android_project/app/build.gradle
-          plugins {
-              id 'com.android.application'
-          }
-          android {
-              namespace 'com.pawarjigaming.shadowvale'
-              compileSdk 34
-              defaultConfig {
-                  applicationId "com.pawarjigaming.shadowvale"
-                  minSdk 24
-                  targetSdk 34
-                  versionCode 1
-                  versionName "1.0"
-              }
-              buildTypes {
-                  release {
-                      minifyEnabled false
-                  }
-              }
-          }
-          dependencies {
-              implementation 'androidx.appcompat:appcompat:1.6.1'
-              implementation 'com.google.android.gms:play-services-ads:23.0.0'
-          }
-          EOF
+          # AndroidManifest.xml
+          echo '<?xml version="1.0" encoding="utf-8"?>' > android_app/app/src/main/AndroidManifest.xml
+          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android">' >> android_app/app/src/main/AndroidManifest.xml
+          echo '    <uses-permission android:name="android.permission.INTERNET" />' >> android_app/app/src/main/AndroidManifest.xml
+          echo '    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' >> android_app/app/src/main/AndroidManifest.xml
+          echo '    <application' >> android_app/app/src/main/AndroidManifest.xml
+          echo '        android:allowBackup="true"' >> android_app/app/src/main/AndroidManifest.xml
+          echo '        android:label="@string/app_name"' >> android_app/app/src/main/AndroidManifest.xml
+          echo '        android:supportsRtl="true"' >> android_app/app/src/main/AndroidManifest.xml
+          echo '        android:theme="@style/Theme.AppCompat.NoActionBar">' >> android_app/app/src/main/AndroidManifest.xml
+          echo '        <meta-data' >> android_app/app/src/main/AndroidManifest.xml
+          echo '            android:name="com.google.android.gms.ads.APPLICATION_ID"' >> android_app/app/src/main/AndroidManifest.xml
+          echo '            android:value="ca-app-pub-8251220250880290~5084634199"/>' >> android_app/app/src/main/AndroidManifest.xml
+          echo '        <activity' >> android_app/app/src/main/AndroidManifest.xml
+          echo '            android:name=".MainActivity"' >> android_app/app/src/main/AndroidManifest.xml
+          echo '            android:exported="true"' >> android_app/app/src/main/AndroidManifest.xml
+          echo '            android:screenOrientation="sensorLandscape"' >> android_app/app/src/main/AndroidManifest.xml
+          echo '            android:configChanges="orientation|screenSize|keyboardHidden">' >> android_app/app/src/main/AndroidManifest.xml
+          echo '            <intent-filter>' >> android_app/app/src/main/AndroidManifest.xml
+          echo '                <action android:name="android.intent.action.MAIN" />' >> android_app/app/src/main/AndroidManifest.xml
+          echo '                <category android:name="android.intent.category.LAUNCHER" />' >> android_app/app/src/main/AndroidManifest.xml
+          echo '            </intent-filter>' >> android_app/app/src/main/AndroidManifest.xml
+          echo '        </activity>' >> android_app/app/src/main/AndroidManifest.xml
+          echo '    </application>' >> android_app/app/src/main/AndroidManifest.xml
+          echo '</manifest>' >> android_app/app/src/main/AndroidManifest.xml
 
-          cat << 'EOF' > android_project/app/src/main/res/values/strings.xml
-          <resources>
-              <string name="app_name">Shadow Vale</string>
-          </resources>
-          EOF
-
-          cat << 'EOF' > android_project/app/src/main/AndroidManifest.xml
-          <?xml version="1.0" encoding="utf-8"?>
-          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
-              <uses-permission android:name="android.permission.INTERNET" />
-              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
-              <application
-                  android:allowBackup="true"
-                  android:label="@string/app_name"
-                  android:supportsRtl="true"
-                  android:theme="@style/Theme.AppCompat.NoActionBar">
-                  <meta-data
-                      android:name="com.google.android.gms.ads.APPLICATION_ID"
-                      android:value="ca-app-pub-8251220250880290~5084634199"/>
-                  <activity
-                      android:name=".MainActivity"
-                      android:exported="true"
-                      android:screenOrientation="sensorLandscape"
-                      android:configChanges="orientation|screenSize|keyboardHidden">
-                      <intent-filter>
-                          <action android:name="android.intent.action.MAIN" />
-                          <category android:name="android.intent.category.LAUNCHER" />
-                      </intent-filter>
-                  </activity>
-              </application>
-          </manifest>
-          EOF
-
-          cat << 'EOF' > android_project/app/src/main/java/com/pawarjigaming/shadowvale/MainActivity.java
+          # MainActivity.java
+          cat << 'JAVA_CODE' > android_app/app/src/main/java/com/pawarjigaming/shadowvale/MainActivity.java
           package com.pawarjigaming.shadowvale;
 
           import android.annotation.SuppressLint;
@@ -182,15 +165,15 @@ jobs:
                   }
               }
           }
-          EOF
+          JAVA_CODE
 
-      - name: Build APK with Gradle
+      - name: Build APK with System Gradle
         run: |
-          cd android_project
-          ./gradlew assembleDebug --no-daemon --stacktrace
+          cd android_app
+          gradle assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ShadowVale-EmberQuest-APK
-          path: android_project/app/build/outputs/apk/debug/app-debug.apk
+          path: android_app/app/build/outputs/apk/debug/app-debug.apk
