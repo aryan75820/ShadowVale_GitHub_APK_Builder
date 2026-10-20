@@ -1,14 +1,13 @@
-name: Build Shadow Vale Android APK
+name: Build Android APK
 
 on:
   push:
-    branches: [ main, master ]
+    branches: [ "main" ]
   workflow_dispatch:
 
 jobs:
-  build-apk:
+  build:
     runs-on: ubuntu-latest
-
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
@@ -19,204 +18,179 @@ jobs:
           distribution: 'temurin'
           java-version: '17'
 
-      - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
-
-      - name: Set up Gradle 8.5
-        uses: gradle/actions/setup-gradle@v4
-        with:
-          gradle-version: '8.5'
-
-      - name: Build Android APK
+      - name: Setup Android Project
         run: |
           mkdir -p android_project/app/src/main/assets
+          mkdir -p android_project/app/src/main/res/values
           mkdir -p android_project/app/src/main/java/com/pawarjigaming/shadowvale
+          mkdir -p android_project/gradle/wrapper
+
+          # Game file copy
           if [ -f "ShadowVale-EmberQuest-Android-APK.zip" ]; then
             cp "ShadowVale-EmberQuest-Android-APK.zip" android_project/app/src/main/assets/index.html
-          else
-            GAME_FILE=$(find . -maxdepth 2 -type f \( -name "*.html" -o -name "ShadowVale*" \) ! -path "./android_project/*" | head -n 1)
-            cp "$GAME_FILE" android_project/app/src/main/assets/index.html
+          elif [ -f "index.html" ]; then
+            cp "index.html" android_project/app/src/main/assets/index.html
           fi
-          echo 'pluginManagement { repositories { google(); mavenCentral(); gradlePluginPortal() } }' > android_project/settings.gradle
-          echo 'dependencyResolutionManagement { repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS); repositories { google(); mavenCentral() } }' >> android_project/settings.gradle
-          echo 'rootProject.name = "ShadowVale"' >> android_project/settings.gradle
-          echo 'include ":app"' >> android_project/settings.gradle
-          echo 'plugins { id "com.android.application" version "8.2.2" apply false }' > android_project/build.gradle
-          echo 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8' > android_project/gradle.properties
-          echo 'android.useAndroidX=true' >> android_project/gradle.properties
-          echo 'android.nonTransitiveRClass=true' >> android_project/gradle.properties
-          APP_GRADLE="android_project/app/build.gradle"
-          echo 'plugins { id "com.android.application" }' > "$APP_GRADLE"
-          echo 'android {' >> "$APP_GRADLE"
-          echo '  namespace "com.pawarjigaming.shadowvale"' >> "$APP_GRADLE"
-          echo '  compileSdk 34' >> "$APP_GRADLE"
-          echo '  defaultConfig {' >> "$APP_GRADLE"
-          echo '    applicationId "com.pawarjigaming.shadowvale"' >> "$APP_GRADLE"
-          echo '    minSdk 24' >> "$APP_GRADLE"
-          echo '    targetSdk 34' >> "$APP_GRADLE"
-          echo '    versionCode 1' >> "$APP_GRADLE"
-          echo '    versionName "1.0"' >> "$APP_GRADLE"
-          echo '  }' >> "$APP_GRADLE"
-          echo '  compileOptions {' >> "$APP_GRADLE"
-          echo '    sourceCompatibility JavaVersion.VERSION_17' >> "$APP_GRADLE"
-          echo '    targetCompatibility JavaVersion.VERSION_17' >> "$APP_GRADLE"
-          echo '  }' >> "$APP_GRADLE"
-          echo '}' >> "$APP_GRADLE"
-          echo 'dependencies {' >> "$APP_GRADLE"
-          echo '  implementation "androidx.appcompat:appcompat:1.6.1"' >> "$APP_GRADLE"
-          echo '  implementation "com.google.android.gms:play-services-ads:23.0.0"' >> "$APP_GRADLE"
-          echo '}' >> "$APP_GRADLE"
-          MANIFEST="android_project/app/src/main/AndroidManifest.xml"
-          echo '<?xml version="1.0" encoding="utf-8"?>' > "$MANIFEST"
-          echo '<manifest xmlns:android="http://schemas.android.com/apk/res/android">' >> "$MANIFEST"
-          echo '  <uses-permission android:name="android.permission.INTERNET" />' >> "$MANIFEST"
-          echo '  <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />' >> "$MANIFEST"
-          echo '  <uses-permission android:name="com.google.android.gms.permission.AD_ID" />' >> "$MANIFEST"
-          echo '  <application android:allowBackup="true" android:label="Shadow Vale Ember Quest" android:hardwareAccelerated="true" android:usesCleartextTraffic="true" android:theme="@style/Theme.AppCompat.NoActionBar">' >> "$MANIFEST"
-          echo '    <meta-data android:name="com.google.android.gms.ads.APPLICATION_ID" android:value="ca-app-pub-8251220250880290~5084634199" />' >> "$MANIFEST"
-          echo '    <activity android:name=".MainActivity" android:exported="true" android:screenOrientation="sensorLandscape" android:configChanges="orientation|screenSize|keyboardHidden|smallestScreenSize|screenLayout">' >> "$MANIFEST"
-          echo '      <intent-filter>' >> "$MANIFEST"
-          echo '        <action android:name="android.intent.action.MAIN" />' >> "$MANIFEST"
-          echo '        <category android:name="android.intent.category.LAUNCHER" />' >> "$MANIFEST"
-          echo '      </intent-filter>' >> "$MANIFEST"
-          echo '    </activity>' >> "$MANIFEST"
-          echo '  </application>' >> "$MANIFEST"
-          echo '</manifest>' >> "$MANIFEST"
-          JAVA_FILE="android_project/app/src/main/java/com/pawarjigaming/shadowvale/MainActivity.java"
-          echo 'package com.pawarjigaming.shadowvale;' > "$JAVA_FILE"
-          echo 'import android.annotation.SuppressLint;' >> "$JAVA_FILE"
-          echo 'import android.os.Bundle;' >> "$JAVA_FILE"
-          echo 'import android.view.Gravity;' >> "$JAVA_FILE"
-          echo 'import android.view.View;' >> "$JAVA_FILE"
-          echo 'import android.view.WindowManager;' >> "$JAVA_FILE"
-          echo 'import android.webkit.JavascriptInterface;' >> "$JAVA_FILE"
-          echo 'import android.webkit.WebChromeClient;' >> "$JAVA_FILE"
-          echo 'import android.webkit.WebSettings;' >> "$JAVA_FILE"
-          echo 'import android.webkit.WebView;' >> "$JAVA_FILE"
-          echo 'import android.webkit.WebViewClient;' >> "$JAVA_FILE"
-          echo 'import android.widget.FrameLayout;' >> "$JAVA_FILE"
-          echo 'import androidx.annotation.NonNull;' >> "$JAVA_FILE"
-          echo 'import androidx.appcompat.app.AppCompatActivity;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.AdError;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.AdRequest;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.AdSize;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.AdView;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.FullScreenContentCallback;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.LoadAdError;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.MobileAds;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.interstitial.InterstitialAd;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.interstitial.InterstitialAdLoadCallback;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.rewarded.RewardedAd;' >> "$JAVA_FILE"
-          echo 'import com.google.android.gms.ads.rewarded.RewardedAdLoadCallback;' >> "$JAVA_FILE"
-          echo 'public class MainActivity extends AppCompatActivity {' >> "$JAVA_FILE"
-          echo '  private WebView webView;' >> "$JAVA_FILE"
-          echo '  private AdView bannerAdView;' >> "$JAVA_FILE"
-          echo '  private InterstitialAd mInterstitialAd;' >> "$JAVA_FILE"
-          echo '  private RewardedAd mRewardedAd;' >> "$JAVA_FILE"
-          echo '  private final String bannerUnitId = "ca-app-pub-8251220250880290/8023542749";' >> "$JAVA_FILE"
-          echo '  private final String interstitialUnitId = "ca-app-pub-8251220250880290/9714319357";' >> "$JAVA_FILE"
-          echo '  private final String rewardedUnitId = "ca-app-pub-8251220250880290/8215114432";' >> "$JAVA_FILE"
-          echo '  @SuppressLint("SetJavaScriptEnabled")' >> "$JAVA_FILE"
-          echo '  @Override protected void onCreate(Bundle savedInstanceState) {' >> "$JAVA_FILE"
-          echo '    super.onCreate(savedInstanceState);' >> "$JAVA_FILE"
-          echo '    getWindow().addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);' >> "$JAVA_FILE"
-          echo '    hideSystemUI();' >> "$JAVA_FILE"
-          echo '    FrameLayout root = new FrameLayout(this);' >> "$JAVA_FILE"
-          echo '    webView = new WebView(this);' >> "$JAVA_FILE"
-          echo '    WebSettings s = webView.getSettings();' >> "$JAVA_FILE"
-          echo '    s.setJavaScriptEnabled(true);' >> "$JAVA_FILE"
-          echo '    s.setDomStorageEnabled(true);' >> "$JAVA_FILE"
-          echo '    s.setMediaPlaybackRequiresUserGesture(false);' >> "$JAVA_FILE"
-          echo '    s.setAllowFileAccess(true);' >> "$JAVA_FILE"
-          echo '    s.setAllowContentAccess(true);' >> "$JAVA_FILE"
-          echo '    webView.setWebChromeClient(new WebChromeClient());' >> "$JAVA_FILE"
-          echo '    webView.setWebViewClient(new WebViewClient());' >> "$JAVA_FILE"
-          echo '    webView.addJavascriptInterface(new AdMobBridge(), "AndroidAdMob");' >> "$JAVA_FILE"
-          echo '    webView.loadUrl("file:///android_asset/index.html");' >> "$JAVA_FILE"
-          echo '    root.addView(webView, new FrameLayout.LayoutParams(-1, -1));' >> "$JAVA_FILE"
-          echo '    bannerAdView = new AdView(this);' >> "$JAVA_FILE"
-          echo '    bannerAdView.setAdSize(AdSize.BANNER);' >> "$JAVA_FILE"
-          echo '    bannerAdView.setAdUnitId(bannerUnitId);' >> "$JAVA_FILE"
-          echo '    FrameLayout.LayoutParams bp = new FrameLayout.LayoutParams(-2, -2);' >> "$JAVA_FILE"
-          echo '    bp.gravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;' >> "$JAVA_FILE"
-          echo '    root.addView(bannerAdView, bp);' >> "$JAVA_FILE"
-          echo '    setContentView(root);' >> "$JAVA_FILE"
-          echo '    MobileAds.initialize(this, status -> {' >> "$JAVA_FILE"
-          echo '      bannerAdView.loadAd(new AdRequest.Builder().build());' >> "$JAVA_FILE"
-          echo '      loadInterstitial();' >> "$JAVA_FILE"
-          echo '      loadRewarded();' >> "$JAVA_FILE"
-          echo '    });' >> "$JAVA_FILE"
-          echo '  }' >> "$JAVA_FILE"
-          echo '  private void loadInterstitial() {' >> "$JAVA_FILE"
-          echo '    InterstitialAd.load(this, interstitialUnitId, new AdRequest.Builder().build(), new InterstitialAdLoadCallback() {' >> "$JAVA_FILE"
-          echo '      @Override public void onAdLoaded(@NonNull InterstitialAd ad) { mInterstitialAd = ad; }' >> "$JAVA_FILE"
-          echo '      @Override public void onAdFailedToLoad(@NonNull LoadAdError err) { mInterstitialAd = null; }' >> "$JAVA_FILE"
-          echo '    });' >> "$JAVA_FILE"
-          echo '  }' >> "$JAVA_FILE"
-          echo '  private void loadRewarded() {' >> "$JAVA_FILE"
-          echo '    RewardedAd.load(this, rewardedUnitId, new AdRequest.Builder().build(), new RewardedAdLoadCallback() {' >> "$JAVA_FILE"
-          echo '      @Override public void onAdLoaded(@NonNull RewardedAd ad) { mRewardedAd = ad; }' >> "$JAVA_FILE"
-          echo '      @Override public void onAdFailedToLoad(@NonNull LoadAdError err) { mRewardedAd = null; }' >> "$JAVA_FILE"
-          echo '    });' >> "$JAVA_FILE"
-          echo '  }' >> "$JAVA_FILE"
-          echo '  public class AdMobBridge {' >> "$JAVA_FILE"
-          echo '    @JavascriptInterface public void initialize(String bId, String iId, String rId) {}' >> "$JAVA_FILE"
-          echo '    @JavascriptInterface public void setBannerVisible(boolean visible, String unitId) {' >> "$JAVA_FILE"
-          echo '      runOnUiThread(() -> {' >> "$JAVA_FILE"
-          echo '        if (bannerAdView != null) {' >> "$JAVA_FILE"
-          echo '          if (visible) bannerAdView.setVisibility(View.VISIBLE);' >> "$JAVA_FILE"
-          echo '          else bannerAdView.setVisibility(View.GONE);' >> "$JAVA_FILE"
-          echo '        }' >> "$JAVA_FILE"
-          echo '      });' >> "$JAVA_FILE"
-          echo '    }' >> "$JAVA_FILE"
-          echo '    @JavascriptInterface public void showInterstitial(String unitId) {' >> "$JAVA_FILE"
-          echo '      runOnUiThread(() -> {' >> "$JAVA_FILE"
-          echo '        if (mInterstitialAd != null) {' >> "$JAVA_FILE"
-          echo '          mInterstitialAd.setFullScreenContentCallback(new FullScreenContentCallback() {' >> "$JAVA_FILE"
-          echo '            @Override public void onAdDismissedFullScreenContent() {' >> "$JAVA_FILE"
-          echo '              mInterstitialAd = null; loadInterstitial();' >> "$JAVA_FILE"
-          echo '              webView.evaluateJavascript("if(window.onAdMobInterstitialClosed) window.onAdMobInterstitialClosed();", null);' >> "$JAVA_FILE"
-          echo '            }' >> "$JAVA_FILE"
-          echo '            @Override public void onAdFailedToShowFullScreenContent(@NonNull AdError e) {' >> "$JAVA_FILE"
-          echo '              mInterstitialAd = null;' >> "$JAVA_FILE"
-          echo '              webView.evaluateJavascript("if(window.onAdMobInterstitialClosed) window.onAdMobInterstitialClosed();", null);' >> "$JAVA_FILE"
-          echo '            }' >> "$JAVA_FILE"
-          echo '          });' >> "$JAVA_FILE"
-          echo '          mInterstitialAd.show(MainActivity.this);' >> "$JAVA_FILE"
-          echo '        } else {' >> "$JAVA_FILE"
-          echo '          loadInterstitial();' >> "$JAVA_FILE"
-          echo '          webView.evaluateJavascript("if(window.onAdMobInterstitialClosed) window.onAdMobInterstitialClosed();", null);' >> "$JAVA_FILE"
-          echo '        }' >> "$JAVA_FILE"
-          echo '      });' >> "$JAVA_FILE"
-          echo '    }' >> "$JAVA_FILE"
-          echo '    @JavascriptInterface public void showRewarded(String unitId) {' >> "$JAVA_FILE"
-          echo '      runOnUiThread(() -> {' >> "$JAVA_FILE"
-          echo '        if (mRewardedAd != null) {' >> "$JAVA_FILE"
-          echo '          mRewardedAd.show(MainActivity.this, rewardItem -> {' >> "$JAVA_FILE"
-          echo '            webView.evaluateJavascript("if(window.onAdMobRewardGranted) window.onAdMobRewardGranted();", null);' >> "$JAVA_FILE"
-          echo '          });' >> "$JAVA_FILE"
-          echo '          mRewardedAd = null; loadRewarded();' >> "$JAVA_FILE"
-          echo '        } else {' >> "$JAVA_FILE"
-          echo '          loadRewarded();' >> "$JAVA_FILE"
-          echo '          webView.evaluateJavascript("if(window.onAdMobRewardGranted) window.onAdMobRewardGranted();", null);' >> "$JAVA_FILE"
-          echo '        }' >> "$JAVA_FILE"
-          echo '      });' >> "$JAVA_FILE"
-          echo '    }' >> "$JAVA_FILE"
-          echo '  }' >> "$JAVA_FILE"
-          echo '  private void hideSystemUI() {' >> "$JAVA_FILE"
-          echo '    getWindow().getDecorView().setSystemUiVisibility(View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY | View.SYSTEM_UI_FLAG_LAYOUT_STABLE | View.SYSTEM_UI_FLAG_LAYOUT_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_LAYOUT_FULLSCREEN | View.SYSTEM_UI_FLAG_HIDE_NAVIGATION | View.SYSTEM_UI_FLAG_FULLSCREEN);' >> "$JAVA_FILE"
-          echo '  }' >> "$JAVA_FILE"
-          echo '  @Override public void onWindowFocusChanged(boolean hasFocus) { super.onWindowFocusChanged(hasFocus); if (hasFocus) hideSystemUI(); }' >> "$JAVA_FILE"
-          echo '  @Override public void onBackPressed() {' >> "$JAVA_FILE"
-          echo '    if (webView != null) webView.evaluateJavascript("if(window.NavigationManager) window.NavigationManager.handleBackNavigation();", null);' >> "$JAVA_FILE"
-          echo '    else super.onBackPressed();' >> "$JAVA_FILE"
-          echo '  }' >> "$JAVA_FILE"
-          echo '}' >> "$JAVA_FILE"
-          cd android_project
-          gradle assembleDebug --no-daemon
 
-      - name: Upload Built APK Artifact
+          # Gradle Wrapper Setup
+          curl -sLo android_project/gradle/wrapper/gradle-wrapper.jar https://raw.githubusercontent.com/gradle/gradle/v8.5.0/gradle/wrapper/gradle-wrapper.jar
+          cat << 'EOF' > android_project/gradle/wrapper/gradle-wrapper.properties
+          distributionBase=GRADLE_USER_HOME
+          distributionPath=wrapper/dists
+          distributionUrl=https\://services.gradle.org/distributions/gradle-8.5-bin.zip
+          zipStoreBase=GRADLE_USER_HOME
+          zipStorePath=wrapper/dists
+          EOF
+
+          cat << 'EOF' > android_project/gradlew
+          #!/bin/sh
+          DIR=$(cd -P -- "$(dirname -- "$0")" && pwd -P)
+          exec java -jar "$DIR/gradle/wrapper/gradle-wrapper.jar" "$@"
+          EOF
+          chmod +x android_project/gradlew
+
+          # Project Configurations
+          cat << 'EOF' > android_project/settings.gradle
+          rootProject.name = "ShadowVale"
+          include ':app'
+          EOF
+
+          cat << 'EOF' > android_project/build.gradle
+          buildscript {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+              dependencies {
+                  classpath 'com.android.tools.build:gradle:8.2.2'
+              }
+          }
+          allprojects {
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          EOF
+
+          cat << 'EOF' > android_project/app/build.gradle
+          plugins {
+              id 'com.android.application'
+          }
+          android {
+              namespace 'com.pawarjigaming.shadowvale'
+              compileSdk 34
+              defaultConfig {
+                  applicationId "com.pawarjigaming.shadowvale"
+                  minSdk 24
+                  targetSdk 34
+                  versionCode 1
+                  versionName "1.0"
+              }
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                  }
+              }
+          }
+          dependencies {
+              implementation 'androidx.appcompat:appcompat:1.6.1'
+              implementation 'com.google.android.gms:play-services-ads:23.0.0'
+          }
+          EOF
+
+          cat << 'EOF' > android_project/app/src/main/res/values/strings.xml
+          <resources>
+              <string name="app_name">Shadow Vale</string>
+          </resources>
+          EOF
+
+          cat << 'EOF' > android_project/app/src/main/AndroidManifest.xml
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+              <application
+                  android:allowBackup="true"
+                  android:label="@string/app_name"
+                  android:supportsRtl="true"
+                  android:theme="@style/Theme.AppCompat.NoActionBar">
+                  <meta-data
+                      android:name="com.google.android.gms.ads.APPLICATION_ID"
+                      android:value="ca-app-pub-8251220250880290~5084634199"/>
+                  <activity
+                      android:name=".MainActivity"
+                      android:exported="true"
+                      android:screenOrientation="sensorLandscape"
+                      android:configChanges="orientation|screenSize|keyboardHidden">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          EOF
+
+          cat << 'EOF' > android_project/app/src/main/java/com/pawarjigaming/shadowvale/MainActivity.java
+          package com.pawarjigaming.shadowvale;
+
+          import android.annotation.SuppressLint;
+          import android.os.Bundle;
+          import android.view.View;
+          import android.webkit.WebChromeClient;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import androidx.appcompat.app.AppCompatActivity;
+          import com.google.android.gms.ads.MobileAds;
+
+          public class MainActivity extends AppCompatActivity {
+              private WebView webView;
+
+              @SuppressLint("SetJavaScriptEnabled")
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().getDecorView().setSystemUiVisibility(
+                      View.SYSTEM_UI_FLAG_FULLSCREEN |
+                      View.SYSTEM_UI_FLAG_HIDE_NAVIGATION |
+                      View.SYSTEM_UI_FLAG_IMMERSIVE_STICKY
+                  );
+
+                  MobileAds.initialize(this, initializationStatus -> {});
+
+                  webView = new WebView(this);
+                  setContentView(webView);
+
+                  WebSettings settings = webView.getSettings();
+                  settings.setJavaScriptEnabled(true);
+                  settings.setDomStorageEnabled(true);
+                  settings.setAllowFileAccess(true);
+
+                  webView.setWebViewClient(new WebViewClient());
+                  webView.setWebChromeClient(new WebChromeClient());
+                  webView.loadUrl("file:///android_asset/index.html");
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (webView != null && webView.canGoBack()) {
+                      webView.goBack();
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+          }
+          EOF
+
+      - name: Build APK with Gradle
+        run: |
+          cd android_project
+          ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
           name: ShadowVale-EmberQuest-APK
-          path: android_project/app/build/outputs/apk/debug/*.apk
+          path: android_project/app/build/outputs/apk/debug/app-debug.apk
