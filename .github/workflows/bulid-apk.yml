@@ -1,43 +1,55 @@
-name: Build Android APK (Pawar Ji Gaming)
-
-on:
-  push:
-    branches: [ "main", "master" ]
-  workflow_dispatch:
+name: Build Shadow Vale Android APK
+on: [push, workflow_dispatch]
 
 jobs:
   build-apk:
     runs-on: ubuntu-latest
-
     steps:
-      - name: 1. Checkout Repository
+      - name: Checkout Repository
         uses: actions/checkout@v4
 
-      - name: 2. Set up JDK 17
+      - name: Auto-Unzip Package & Verify Android Project
+        run: |
+          for z in *.zip; do
+            if [ -f "$z" ]; then
+              unzip -o "$z"
+            fi
+          done
+          mkdir -p app/src/main/assets app/src/main/java/com/pawarjigaming/shadowvale
+          if [ -f index.html ] && [ ! -f app/src/main/assets/index.html ]; then
+            cp index.html app/src/main/assets/index.html
+          fi
+          if [ ! -f settings.gradle ]; then
+            printf 'pluginManagement {\n  repositories {\n    google()\n    mavenCentral()\n    gradlePluginPortal()\n  }\n}\ndependencyResolutionManagement {\n  repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)\n  repositories {\n    google()\n    mavenCentral()\n  }\n}\nrootProject.name = "ShadowValeEmberQuest"\ninclude ":app"\n' > settings.gradle
+          fi
+          if [ ! -f gradle.properties ]; then
+            printf 'org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8\nandroid.useAndroidX=true\n' > gradle.properties
+          fi
+          if [ ! -f build.gradle ]; then
+            printf 'plugins {\n  id "com.android.application" version "8.1.4" apply false\n}\n' > build.gradle
+          fi
+          if [ ! -f app/build.gradle ]; then
+            printf 'plugins {\n  id "com.android.application"\n}\nandroid {\n  namespace "com.pawarjigaming.shadowvale"\n  compileSdk 34\n  defaultConfig {\n    applicationId "com.pawarjigaming.shadowvale"\n    minSdk 24\n    targetSdk 34\n    versionCode 1\n    versionName "1.0"\n  }\n  compileOptions {\n    sourceCompatibility JavaVersion.VERSION_17\n    targetCompatibility JavaVersion.VERSION_17\n  }\n}\ndependencies {\n  implementation "androidx.appcompat:appcompat:1.6.1"\n  implementation "com.google.android.gms:play-services-ads:23.0.0"\n}\n' > app/build.gradle
+          fi
+
+      - name: Set up JDK 17
         uses: actions/setup-java@v4
         with:
-          java-version: '17'
           distribution: 'temurin'
+          java-version: '17'
 
-      - name: 3. Setup Android SDK
+      - name: Setup Android SDK
         uses: android-actions/setup-android@v3
 
-      - name: 4. Setup Gradle
+      - name: Setup Gradle 8.4
         uses: gradle/actions/setup-gradle@v3
         with:
           gradle-version: '8.4'
 
-      - name: 5. Sync Latest index.html into Android Assets
-        run: |
-          mkdir -p app/src/main/assets
-          if [ -f "index.html" ]; then
-            cp index.html app/src/main/assets/index.html
-          fi
+      - name: Build Debug APK
+        run: gradle assembleDebug --no-daemon --stacktrace
 
-      - name: 6. Build Installable Android APK (with AdMob SDK)
-        run: gradle assembleDebug --no-daemon
-
-      - name: 7. Upload Ready-to-Install APK Artifact
+      - name: Upload Ready Android APK
         uses: actions/upload-artifact@v4
         with:
           name: ShadowVale-EmberQuest-Android-APK
