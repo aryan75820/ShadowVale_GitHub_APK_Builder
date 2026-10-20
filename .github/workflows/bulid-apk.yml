@@ -7,7 +7,7 @@ on:
 
 jobs:
   build-apk:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
 
     steps:
       - name: 1. Checkout Repository
@@ -19,51 +19,77 @@ jobs:
           java-version: '17'
           distribution: 'temurin'
 
-      - name: 3. Set up Android SDK & Gradle
-        uses: android-actions/setup-android@v3
-
-      - name: 4. Generate Android Project & Auto-Fit Mobile Display
+      - name: 3. Clean index.html, Inject Mobile Auto-Fit & Generate Android Project
         run: |
           mkdir -p android_build/app/src/main/assets
           mkdir -p android_build/app/src/main/java/com/pawarjigaming/shadowvale
           mkdir -p android_build/app/src/main/res/layout
           mkdir -p android_build/app/src/main/res/values
 
+          # Locate HTML file in repo
           if [ -f "index.html" ]; then
-            cp index.html android_build/app/src/main/assets/index.html
+            SRC_HTML="index.html"
           elif [ -f "shadowblade_android_rpg.html" ]; then
-            cp shadowblade_android_rpg.html android_build/app/src/main/assets/index.html
+            SRC_HTML="shadowblade_android_rpg.html"
           elif [ -f "app/src/main/assets/index.html" ]; then
-            cp app/src/main/assets/index.html android_build/app/src/main/assets/index.html
+            SRC_HTML="app/src/main/assets/index.html"
           else
-            FIRST_HTML=$(find . -maxdepth 2 -name "*.html" | head -n 1)
-            if [ -n "$FIRST_HTML" ]; then
-              cp "$FIRST_HTML" android_build/app/src/main/assets/index.html
-            else
-              echo "ERROR: Repo mein index.html upload karein!"
-              exit 1
-            fi
+            SRC_HTML=$(find . -maxdepth 3 -name "*.html" | head -n 1)
           fi
 
-          # Inject Mobile Display Auto-Fit CSS & JS into index.html
-          cat << 'EOF' >> android_build/app/src/main/assets/index.html
+          if [ -z "$SRC_HTML" ]; then
+            echo "ERROR: Repo mein koi .html file nahi mili!"
+            exit 1
+          fi
+
+          # Auto-clean duplicate/triple pasted HTML & inject Mobile Display Auto-Fit Patch
+          python3 - "$SRC_HTML" "android_build/app/src/main/assets/index.html" << 'PYEOF'
+          import sys
+
+          src_path, dst_path = sys.argv[1], sys.argv[2]
+          with open(src_path, 'r', encoding='utf-8', errors='ignore') as f:
+              content = f.read()
+
+          # If HTML was pasted 2 or 3 times back-to-back, keep only the first complete copy
+          lower = content.lower()
+          end_idx = lower.find('</html>')
+          if end_idx != -1:
+              content = content[:end_idx + 7]
+
+          mobile_patch = """
           <style>
-            html, body { width: 100dvw !important; height: 100dvh !important; overflow: hidden !important; position: fixed !important; inset: 0 !important; }
-            .screen-layer { width: 100dvw !important; height: 100dvh !important; padding: 6px 10px !important; }
+            html, body {
+              width: 100dvw !important;
+              height: 100dvh !important;
+              overflow: hidden !important;
+              position: fixed !important;
+              inset: 0 !important;
+            }
+            .screen-layer {
+              width: 100dvw !important;
+              height: 100dvh !important;
+              padding: 6px 10px !important;
+            }
             @media (max-height: 500px) {
-              #pawarSplashCenterCard { padding: 8px 14px !important; max-height: 78dvh !important; transform: scale(0.82) !important; }
+              #screen-splash-intro { padding: 8px 12px !important; }
+              #pawarSplashCenterCard { padding: 8px 14px !important; max-height: 78dvh !important; transform: scale(0.80) !important; }
               #pawarSplashCenterCard .w-24 { width: 44px !important; height: 44px !important; margin-bottom: 4px !important; }
-              #pawarSplashCenterCard h1 { font-size: 1.45rem !important; }
-              #btnTapToOpenGame { padding: 7px 16px !important; font-size: 0.78rem !important; }
+              #pawarSplashCenterCard h1 { font-size: 1.4rem !important; }
+              #btnTapToOpenGame { padding: 6px 14px !important; font-size: 0.75rem !important; }
+              #screen-main-menu { padding: 6px 12px 34px 12px !important; }
               #screen-main-menu h1 { font-size: 1.65rem !important; }
               #screen-main-menu h2 { font-size: 0.85rem !important; margin-bottom: 4px !important; }
-              #screen-main-menu .menu-btn, #screen-main-menu .crimson-btn { padding: 6px 12px !important; font-size: 0.74rem !important; }
-              #popup-level-complete > div, #popup-pause > div, #popup-gameover > div, #popup-confirm > div { max-height: 92dvh !important; overflow-y: auto !important; padding: 10px 14px !important; }
-              :root { --hud-scale: 0.75 !important; --btn-scale: 0.80 !important; --joy-scale: 0.80 !important; }
+              #screen-main-menu .menu-btn, #screen-main-menu .crimson-btn { padding: 5px 12px !important; font-size: 0.72rem !important; }
+              #popup-level-complete > div, #popup-pause > div, #popup-gameover > div, #popup-confirm > div {
+                max-height: 92dvh !important; overflow-y: auto !important; padding: 10px 14px !important;
+              }
+              :root { --hud-scale: 0.74 !important; --btn-scale: 0.80 !important; --joy-scale: 0.80 !important; }
             }
-            @media (max-width: 600px) {
+            @media (max-width: 640px) {
               :root { --hud-scale: 0.68 !important; --btn-scale: 0.76 !important; --joy-scale: 0.76 !important; }
               #screen-gameplay > div.origin-top { top: 52px !important; }
+              #pawarSplashCenterCard { padding: 14px 12px !important; width: 95% !important; }
+              #pawarSplashCenterCard h1 { font-size: 1.6rem !important; }
             }
           </style>
           <script>
@@ -71,21 +97,36 @@ jobs:
               function fitMobileScreen() {
                 var vw = window.innerWidth, vh = window.innerHeight, isPortrait = vh > vw;
                 var joyWrap = document.getElementById('touchJoystickWrapper');
-                if (joyWrap) { joyWrap.style.left = '14px'; joyWrap.style.bottom = isPortrait ? '22px' : '12px'; }
-                var layout = {
-                  btnAttack:  { right: '14px', bottom: '14px' },
+                if (joyWrap) {
+                  joyWrap.style.left = '14px';
+                  joyWrap.style.bottom = isPortrait ? '20px' : '12px';
+                }
+                var layout = isPortrait ? {
+                  btnAttack:  { right: '12px', bottom: '18px' },
+                  btnJump:    { right: '86px', bottom: '16px' },
+                  btnDash:    { right: '148px', bottom: '18px' },
+                  btnThrow:   { right: '14px', bottom: '92px' },
+                  btnSpecial: { right: '80px', bottom: '82px' },
+                  btnPotion:  { right: '144px', bottom: '82px' }
+                } : {
+                  btnAttack:  { right: '16px', bottom: '14px' },
                   btnJump:    { right: '96px', bottom: '14px' },
-                  btnDash:    { right: '164px', bottom: '16px' },
-                  btnThrow:   { right: '16px', bottom: '92px' },
+                  btnDash:    { right: '162px', bottom: '16px' },
+                  btnThrow:   { right: '18px', bottom: '92px' },
                   btnSpecial: { right: '86px', bottom: '82px' },
                   btnPotion:  { right: '154px', bottom: '82px' }
                 };
                 Object.keys(layout).forEach(function(id) {
                   var el = document.getElementById(id);
-                  if (el) { el.style.left = 'auto'; el.style.right = layout[id].right; el.style.bottom = layout[id].bottom; }
+                  if (el) {
+                    el.style.left = 'auto';
+                    el.style.right = layout[id].right;
+                    el.style.bottom = layout[id].bottom;
+                    el.style.transformOrigin = 'bottom right';
+                  }
                 });
                 if (typeof canvas !== 'undefined' && canvas) {
-                  var targetW = isPortrait ? 680 : 860;
+                  var targetW = isPortrait ? 660 : 860;
                   if (vw < targetW) {
                     var ratio = targetW / vw;
                     cw = Math.round(vw * ratio);
@@ -99,8 +140,13 @@ jobs:
                 }
               }
               window.addEventListener('resize', fitMobileScreen);
+              window.addEventListener('orientationchange', function() { setTimeout(fitMobileScreen, 120); });
               window.addEventListener('load', function() {
-                setTimeout(fitMobileScreen, 60);
+                setTimeout(fitMobileScreen, 50);
+                var origApply = window.applySettingsAndControlsToDOM;
+                if (typeof origApply === 'function') {
+                  window.applySettingsAndControlsToDOM = function() { origApply(); fitMobileScreen(); };
+                }
                 var origResize = window.resizeCanvas;
                 if (typeof origResize === 'function') {
                   window.resizeCanvas = function() { origResize(); fitMobileScreen(); };
@@ -109,7 +155,17 @@ jobs:
               });
             })();
           </script>
-          EOF
+          """
+
+          if '</body>' in content:
+              content = content.replace('</body>', mobile_patch + '\n</body>', 1)
+          else:
+              content += mobile_patch
+
+          with open(dst_path, 'w', encoding='utf-8') as f:
+              f.write(content)
+          print("Successfully cleaned and patched index.html for mobile display!")
+          PYEOF
 
           cat << 'EOF' > android_build/settings.gradle
           pluginManagement {
@@ -380,15 +436,4 @@ jobs:
           }
           EOF
 
-      - name: 5. Build Debug APK with Gradle
-        working-directory: android_build
-        run: |
-          gradle wrapper --gradle-version 8.4
-          chmod +x gradlew
-          ./gradlew assembleDebug --no-daemon
-
-      - name: 6. Upload Installable APK Artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: ShadowVale-EmberQuest-Android-APK
-          path: android_build/app/build/outputs/apk/debug/app-debug.apk
+      - name: 4
